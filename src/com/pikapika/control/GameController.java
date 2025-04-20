@@ -54,7 +54,7 @@ public class GameController extends JFrame {
     // <<< THÊM: Trạng thái và Timer cho Auto Play >>>
     private boolean isAutoPlaying = false;
     private Timer autoPlayTimer;
-    private final int AUTO_PLAY_DELAY_MS = 250; // Độ trễ giữa các bước tự động (ms)
+    private final int AUTO_PLAY_DELAY_MS = 1000; // Độ trễ giữa các bước tự động (ms)
 
 
     public GameController(String title) throws HeadlessException {
@@ -308,6 +308,7 @@ public class GameController extends JFrame {
                     }
                 }
             } // end onPikachuClicked
+
         }); // --- Kết thúc cài đặt PlayGameListener ---
 
         // --- Cài đặt Listener cho Pause Menu View ---

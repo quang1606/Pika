@@ -54,7 +54,7 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
     private Timer suggestionTimer;
     private final int SUGGESTION_DURATION_MS = 1500;
     // <<< SỬA LẠI MÀU GỢI Ý THEO YÊU CẦU TRƯỚC >>>
-    private final Color SUGGEST_BORDER_COLOR = Color.RED;
+    private final Color SUGGEST_BORDER_COLOR = Color.BLACK;
 
 
     // Constructors

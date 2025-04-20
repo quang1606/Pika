@@ -1,6 +1,7 @@
 package com.pikapika.control;
 
 import com.pikapika.utils.Utils;
+import com.pikapika.view.Pikachu;
 // Không cần import Pikachu ở đây nữa nếu chỉ xử lý ma trận và tọa độ
 // import com.pikapika.view.Pikachu;
 import java.awt.Point; // Import Point để làm việc với tọa độ
@@ -366,6 +367,8 @@ public class Matrix {
         // Gọi suggestPairCoords, nếu nó trả về khác null tức là còn nước đi
         return suggestPairCoords() != null;
     }
+
+
 
     /* Các phương thức cũ không cần thiết nữa vì đã có renderMatrix tốt hơn */
     // private int demPT(int value) { ... } // Không cần nữa

@@ -23,7 +23,6 @@ public class MenuView extends JpanelBackground implements ActionListener{
     private JButton btMedium;
     private JButton btHard;
     // private JButton btSetting; // <<< BỎ ĐI >>>
-    private JButton btAutoPlay;   // <<< THAY THẾ >>>
     private JButton btQuit;
 
     // Listener
@@ -41,7 +40,6 @@ public class MenuView extends JpanelBackground implements ActionListener{
         btMedium = new JButton();
         btHard = new JButton();
         // btSetting = new JButton(); // <<< BỎ ĐI >>>
-        btAutoPlay = new JButton();   // <<< THAY THẾ >>>
         btQuit = new JButton();
 
         // Cấu hình nút Easy
@@ -60,10 +58,7 @@ public class MenuView extends JpanelBackground implements ActionListener{
         btHard.addActionListener(this);
 
         // Cấu hình nút Auto Play <<< THAY ĐỔI >>>
-        btAutoPlay.setText(BT_AUTO_PLAY); // <<< SỬ DỤNG HẰNG SỐ MỚI (Cần định nghĩa trong Utils) >>>
-        btAutoPlay.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btAutoPlay.addActionListener(this);
-        btAutoPlay.setToolTipText("Bắt đầu màn chơi mới với chế độ tự động"); // Thêm gợi ý
+
 
         // Cấu hình nút Quit
         btQuit.setText(BT_QUIT); // Giả sử BT_QUIT được định nghĩa trong Utils
@@ -82,7 +77,6 @@ public class MenuView extends JpanelBackground implements ActionListener{
                                         .addComponent(btEasy, GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE)     // Đặt kích thước cố định hoặc Preferred
                                         .addComponent(btMedium, GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE)
                                         .addComponent(btHard, GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE)
-                                        .addComponent(btAutoPlay, GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE) // <<< THAY THẾ btSetting >>>
                                         .addComponent(btQuit, GroupLayout.DEFAULT_SIZE, 336, Short.MAX_VALUE))
                                 .addContainerGap(196, Short.MAX_VALUE)) // Điều chỉnh khoảng cách lề phải nếu cần
         );
@@ -96,7 +90,6 @@ public class MenuView extends JpanelBackground implements ActionListener{
                                 .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(btHard, GroupLayout.PREFERRED_SIZE, 52, GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(btAutoPlay, GroupLayout.PREFERRED_SIZE, 52, GroupLayout.PREFERRED_SIZE) // <<< THAY THẾ btSetting >>>
                                 .addGap(18, 18, 18) // Khoảng cách lớn hơn trước nút Quit
                                 .addComponent(btQuit, GroupLayout.PREFERRED_SIZE, 52, GroupLayout.PREFERRED_SIZE)
                                 .addGap(69, 69, 69)) // Khoảng cách từ dưới lên
