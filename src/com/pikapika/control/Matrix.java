@@ -1,27 +1,26 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.pikapika.control;
 
 import com.pikapika.utils.Utils;
-import com.pikapika.view.Pikachu;
+// Không cần import Pikachu ở đây nữa nếu chỉ xử lý ma trận và tọa độ
+// import com.pikapika.view.Pikachu;
+import java.awt.Point; // Import Point để làm việc với tọa độ
 import java.util.Random;
-import java.util.Scanner;
+// Bỏ import Scanner vì không dùng
+// import java.util.Scanner;
 
 import static com.pikapika.utils.Utils.PIKACHU_NUMBER;
 
 /**
  *
  * @author Ronaldo Hanh
+ * @author Refactored for Coordinate-based logic
  */
 public class Matrix {
-    private int matrix[][];
-    private static final int CONST_VALUE = 0; //Mac dinh nhung o khong co anh co value  = 0
+    private int[][] matrix;
+    private static final int CONST_VALUE = 0; // Giá trị ô trống
     private int row;
     private int col;
-    private int value;
+    // private int value; // Biến này dường như không được sử dụng, có thể bỏ
 
     public int getRow() {
         return row;
@@ -39,13 +38,8 @@ public class Matrix {
         this.col = col;
     }
 
-    public int getValue() {
-        return value;
-    }
-
-    public void setValue(int value) {
-        this.value = value;
-    }
+    // public int getValue() { return value; } // Không dùng
+    // public void setValue(int value) { this.value = value; } // Không dùng
 
     public int[][] getMatrix() {
         return matrix;
@@ -55,19 +49,40 @@ public class Matrix {
         this.matrix = matrix;
     }
 
-    // them phuong thuc set value tai toa do cua pikachu
+    // Phương thức này vẫn hữu ích nếu Controller cần cập nhật ma trận dựa trên đối tượng Pikachu từ View
+    // public void setXY(Pikachu pikachu, int value) {
+    //     if (isValidCoord(pikachu.getXPoint(), pikachu.getYPoint())) {
+    //          this.matrix[pikachu.getXPoint()][pikachu.getYPoint()] = value;
+    //     }
+    // }
 
-    public void setXY(Pikachu pikachu, int value) {
-        this.matrix[pikachu.getXPoint()][pikachu.getYPoint()] = value;
+    // Phương thức này dùng tọa độ, rất tốt
+    public void setXY(int r, int c, int value) {
+        if (isValidCoord(r, c)) {
+            this.matrix[r][c] = value;
+        }
     }
 
-    public void setXY(int x, int y, int value) {
-        this.matrix[x][y] = value;
+    // Phương thức này vẫn hữu ích
+    // public int getXY(Pikachu pikachu) {
+    //     if (isValidCoord(pikachu.getXPoint(), pikachu.getYPoint())) {
+    //          return matrix[pikachu.getXPoint()][pikachu.getYPoint()];
+    //     }
+    //     return -1; // Hoặc ném Exception nếu tọa độ không hợp lệ
+    // }
+
+    public int getXY(int r, int c) {
+        if (isValidCoord(r, c)) {
+            return matrix[r][c];
+        }
+        return -1; // Hoặc ném Exception
     }
 
-    public int getXY(Pikachu pikachu) {
-        return matrix[pikachu.getXPoint()][pikachu.getYPoint()];
+    // Hàm trợ giúp kiểm tra tọa độ hợp lệ
+    private boolean isValidCoord(int r, int c) {
+        return r >= 0 && r < row && c >= 0 && c < col;
     }
+
 
     public Matrix(int row, int col) {
         this.setCol(col);
@@ -78,257 +93,286 @@ public class Matrix {
     /*Tao Random Matrix*/
     public int[][] renderMatrix() {
         this.matrix = new int[row][col];
+        // Khởi tạo tất cả là ô trống (đã bao gồm viền)
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
                 matrix[i][j] = CONST_VALUE;
             }
         }
-        /* Tao random Matrix */
+
+        // Tính số cặp cần tạo
+        int totalCells = (row - 2) * (col - 2);
+        if (totalCells % 2 != 0) {
+            totalCells--; // Đảm bảo số ô là chẵn nếu cần
+        }
+        int numPairs = totalCells / 2;
+
         Random random = new Random();
-        for (int i = 1; i < row - 1; i++) {
-            for (int j = 1; j < col - 1; j++) {
-
-                matrix[i][j] = random.nextInt(PIKACHU_NUMBER) + 1;
-            }
+        // Tạo các cặp giá trị ngẫu nhiên
+        for (int pairIndex = 0; pairIndex < numPairs; pairIndex++) {
+            int value = random.nextInt(PIKACHU_NUMBER) + 1;
+            // Tìm 2 vị trí trống để đặt cặp giá trị
+            placeValueInEmptyCell(value);
+            placeValueInEmptyCell(value);
         }
-
-        Utils.debug(getClass(),(row - 2) * (col - 2) / 4 - 1+"");
-
-        /*Dinh dang lai Matrix */
-        for (int i = 1; i <= PIKACHU_NUMBER+1; i++) {
-            if (demPT(i) % 2 != 0) {
-                change(i);
-            }
-        }
+        Utils.debug(getClass(), "Matrix rendered with " + numPairs + " pairs.");
         return this.matrix;
     }
 
-    /*Dem so phan tu giong nhau */
-    private int demPT(int value) {
-        int count = 0;
-        for (int i = 0; i < row; i++) {
-            for (int j = 0; j < col; j++) {
-                if (matrix[i][j] == value) {
-                    count++;
-                }
-            }
-        }
-        return count;
+    // Hàm trợ giúp đặt giá trị vào ô trống ngẫu nhiên bên trong viền
+    private void placeValueInEmptyCell(int value) {
+        Random random = new Random();
+        int r, c;
+        do {
+            r = random.nextInt(row - 2) + 1; // Từ 1 đến row-2
+            c = random.nextInt(col - 2) + 1; // Từ 1 đến col-2
+        } while (matrix[r][c] != CONST_VALUE); // Lặp lại nếu ô đã có giá trị
+        matrix[r][c] = value;
     }
 
-    /*Thay doi gia tri cua phan tu de thanh cac cap*/
-    private void change(int value) {
-        for (int i = 0; i < row; i++) {
-            for (int j = 0; j < col; j++) {
-                if (this.matrix[i][j] == value) {
-                    this.matrix[i][j]++;
-                }
+
+    /* ----- PHẦN LOGIC KIỂM TRA ĐƯỜNG ĐI ĐÃ SỬA ĐỔI ----- */
+
+    /* TH1: Kiểm tra đường thẳng */
+    /** Kiểm tra đường thẳng giữa 2 cột c1, c2 trên cùng hàng r */
+    private boolean checkLineX(int c1, int c2, int r) {
+        if (!isValidCoord(r, c1) || !isValidCoord(r, c2)) return false; // Kiểm tra tọa độ hợp lệ
+        int minCol = Math.min(c1, c2);
+        int maxCol = Math.max(c1, c2);
+        for (int c = minCol + 1; c < maxCol; c++) {
+            if (matrix[r][c] != CONST_VALUE) {
+                return false; // Có vật cản
             }
         }
+        return true; // Không có vật cản
     }
 
-    /*Giai thuat kiem tra 2 diem da click vao co duong noi voi nhau hay khong */
-    /*TH1: Cung nam tren 1 hang hoac 1 cot*/
-    private boolean checkLineX(int y1, int y2, int x) {
-        int minCol = Math.min(y1, y2);
-        int maxCol = Math.max(y1, y2);
-        for (int y = minCol + 1; y < maxCol; y++) {
-            if (matrix[x][y] != CONST_VALUE) {
-                return false;
+    /** Kiểm tra đường thẳng giữa 2 hàng r1, r2 trên cùng cột c */
+    private boolean checkLineY(int r1, int r2, int c) {
+        if (!isValidCoord(r1, c) || !isValidCoord(r2, c)) return false; // Kiểm tra tọa độ hợp lệ
+        int minRow = Math.min(r1, r2);
+        int maxRow = Math.max(r1, r2);
+        for (int r = minRow + 1; r < maxRow; r++) {
+            if (matrix[r][c] != CONST_VALUE) {
+                return false; // Có vật cản
             }
         }
-        return true;
+        return true; // Không có vật cản
     }
 
-    private boolean checkLineY(int x1, int x2, int y) {
-        int maxRow = Math.max(x1, x2);
-        int minRow = Math.min(x1, x2);
-        for (int x = minRow + 1; x < maxRow; x++) {
-            if (this.matrix[x][y] != CONST_VALUE) {
-                return false;
-            }
-        }
-        return true;
-    }
-    /*TH2: Xet duyet cac duong di theo chieu ngang, doc trong pham vi chu 
-     nhat */
+    /* TH2: Kiểm tra đường chữ nhật (L-shape) */
+    /** Kiểm tra đường chữ L qua góc (r1, c2) hoặc (r2, c1) */
+    private boolean checkRect(int r1, int c1, int r2, int c2) {
+        if (!isValidCoord(r1, c1) || !isValidCoord(r2, c2)) return false;
 
-    //Xet duyet theo chieu ngang
-    private boolean checkRecX(Pikachu p1, Pikachu p2) {
-        Pikachu pMinY = p1;
-        Pikachu pMaxY = p2;
-        if (p1.getYPoint() > p2.getYPoint()) {
-            pMinY = p2;
-            pMaxY = p1;
-        }
-        for (int y = pMinY.getYPoint(); y <= pMaxY.getYPoint(); y++) {
-            if (y > pMinY.getYPoint() && matrix[pMinY.getXPoint()][y] != CONST_VALUE) {
-                return false;
+        // Kiểm tra góc (r1, c2)
+        if (matrix[r1][c2] == CONST_VALUE) { // Nếu góc trống
+            if (checkLineX(c1, c2, r1) && checkLineY(r1, r2, c2)) {
+                return true;
             }
-            if ((matrix[pMaxY.getXPoint()][y] == CONST_VALUE || y == pMaxY.getYPoint())
-                    && checkLineY(pMinY.getXPoint(), pMaxY.getXPoint(), y)
-                    && checkLineX(y, pMaxY.getYPoint(), pMaxY.getXPoint())) {
+        }
+        // Kiểm tra góc (r2, c1)
+        if (matrix[r2][c1] == CONST_VALUE) { // Nếu góc trống
+            if (checkLineY(r1, r2, c1) && checkLineX(c1, c2, r2)) {
                 return true;
             }
         }
         return false;
     }
 
-    //Xet duyet theo chieu doc hinh chu nhat
-    private boolean checkRecY(Pikachu p1, Pikachu p2) {
-        System.out.println("check rect y");
-        Pikachu pMinX = p1;
-        Pikachu pMaxX = p2;
-        if (p1.getXPoint() > p2.getXPoint()) {
-            pMinX = p2;
-            pMaxX = p1;
-        }
-        for (int x = pMinX.getXPoint(); x <= pMaxX.getXPoint(); x++) {
-            System.out.println(x + "   " + pMinX.getXPoint() + "  " + pMinX.getYPoint());
-            if (x > pMinX.getXPoint() && matrix[x][pMinX.getYPoint()] != CONST_VALUE) {
-                
-             //1System.out.println(x + "   "+ pMinX.getXPoint());
-             return false;
-             }
-            if ((matrix[x][pMaxX.getYPoint()] == CONST_VALUE || x == pMaxX.getXPoint())
-                    && checkLineX(pMinX.getYPoint(), pMaxX.getYPoint(), x)
-                    && checkLineY(x, pMaxX.getXPoint(), pMaxX.getYPoint())) {
 
-                return true;
+    /* TH3: Kiểm tra mở rộng (U-shape) */
+    /** Kiểm tra mở rộng theo chiều ngang (sang trái hoặc phải) */
+    private boolean checkMoreLineX(int r1, int c1, int r2, int c2, int direction) {
+        if (!isValidCoord(r1, c1) || !isValidCoord(r2, c2)) return false;
+
+        // Tìm cột bắt đầu và kết thúc để quét ngang
+        int startCol = (direction == -1) ? Math.min(c1, c2) - 1 : Math.max(c1, c2) + 1;
+        int currentCol = startCol;
+
+        // Quét ngang ra ngoài theo hướng `direction`
+        while (isValidCoord(r1, currentCol) && matrix[r1][currentCol] == CONST_VALUE) {
+            // Nếu tìm thấy đường dọc nối tới hàng của điểm kia tại cột này
+            if (isValidCoord(r2, currentCol) && matrix[r2][currentCol] == CONST_VALUE && checkLineY(r1, r2, currentCol)) {
+                // Kiểm tra tiếp đường ngang từ (r2, currentCol) đến (r2, c2)
+                if (checkLineX(currentCol, c2, r2)) {
+                    return true;
+                }
             }
+            // Di chuyển đến cột tiếp theo
+            if (direction == 0) break; // Tránh vòng lặp vô hạn nếu direction = 0 (lỗi)
+            currentCol += direction;
+            // Dừng nếu đi ra ngoài biên trái/phải cùng
+            if (currentCol < 0 || currentCol >= col) break;
         }
         return false;
     }
 
-    /*TH3: Xet mo rong theo hang ngang, hang doc*/
-    //Xet theo chieu ngang
-    //type = -1 la di sang trai type=1 la di sang phai 
-    private boolean checkMoreLineX(Pikachu p1, Pikachu p2, int type) {
-        Pikachu pMinY = p1, pMaxY = p2;
-        if (p1.getYPoint() > p2.getYPoint()) {
-            pMinY = p2;
-            pMaxY = p1;
-        }
-        int y = pMaxY.getYPoint() + type;
-        int _row = pMinY.getXPoint();
-        int colFinish = pMaxY.getYPoint();
-        if (type == -1) {
-            colFinish = pMinY.getYPoint();
-            y = pMinY.getYPoint() + type;
-            _row = pMaxY.getXPoint();
-        }
-        if ((this.matrix[_row][colFinish] == CONST_VALUE || pMinY.getYPoint() == pMaxY.getYPoint())
-                && checkLineX(pMinY.getYPoint(), pMaxY.getYPoint(), _row)) {
-            //System.out.println(pMinY.x + "  " + y);
-            while (this.matrix[pMinY.getXPoint()][y] == CONST_VALUE
-                    && this.matrix[pMaxY.getXPoint()][y] == CONST_VALUE) {
-                if (checkLineY(pMinY.getXPoint(), pMaxY.getXPoint(), y)) {
+    /** Kiểm tra mở rộng theo chiều dọc (lên trên hoặc xuống dưới) */
+    private boolean checkMoreLineY(int r1, int c1, int r2, int c2, int direction) {
+        if (!isValidCoord(r1, c1) || !isValidCoord(r2, c2)) return false;
+
+        // Tìm hàng bắt đầu và kết thúc để quét dọc
+        int startRow = (direction == -1) ? Math.min(r1, r2) - 1 : Math.max(r1, r2) + 1;
+        int currentRow = startRow;
+
+        // Quét dọc ra ngoài theo hướng `direction`
+        while (isValidCoord(currentRow, c1) && matrix[currentRow][c1] == CONST_VALUE) {
+            // Nếu tìm thấy đường ngang nối tới cột của điểm kia tại hàng này
+            if (isValidCoord(currentRow, c2) && matrix[currentRow][c2] == CONST_VALUE && checkLineX(c1, c2, currentRow)) {
+                // Kiểm tra tiếp đường dọc từ (currentRow, c2) đến (r2, c2)
+                if (checkLineY(currentRow, r2, c2)) {
                     return true;
                 }
-                y += type;
             }
+            // Di chuyển đến hàng tiếp theo
+            if (direction == 0) break; // Tránh vòng lặp vô hạn nếu direction = 0 (lỗi)
+            currentRow += direction;
+            // Dừng nếu đi ra ngoài biên trên/dưới cùng
+            if (currentRow < 0 || currentRow >= row) break;
         }
         return false;
     }
-    // Xet mo rong theo chieu doc type = 1 ( di len tren) type = -1 (di xuong 
-    // duoi)
 
-    private boolean checkMoreLineY(Pikachu p1, Pikachu p2, int type) {
-        Pikachu pMinX = p1, pMaxX = p2;
-        if (p1.getXPoint() > p2.getXPoint()) {
-            pMinX = p2;
-            pMaxX = p1;
-        }
-        int x = pMaxX.getXPoint() + type;
-        int _col = pMinX.getYPoint();
-        int rowFinish = pMaxX.getXPoint();
-        if (type == -1) {
-            rowFinish = pMinX.getXPoint();
-            x = pMinX.getXPoint() + type;
-            _col = pMaxX.getYPoint();
-        }
-        if ((this.matrix[rowFinish][_col] == CONST_VALUE || pMinX.getXPoint() == pMaxX.getXPoint())
-                && checkLineY(pMinX.getXPoint(), pMaxX.getXPoint(), _col)) {
-            //System.out.println(x + "  " + pMinX.y);
-            while (this.matrix[x][pMinX.getYPoint()] == CONST_VALUE
-                    && this.matrix[x][pMaxX.getYPoint()] == CONST_VALUE) {
-                if (checkLineX(pMinX.getYPoint(), pMaxX.getYPoint(), x)) {
-                    return true;
-                }
-                x += type;
+    /* ---- Algorithm chính sử dụng tọa độ ---- */
+    /**
+     * Kiểm tra xem có đường đi hợp lệ giữa hai điểm (r1, c1) và (r2, c2) không.
+     * Cả hai điểm phải có cùng giá trị và khác ô trống.
+     * @param r1 Hàng của điểm 1
+     * @param c1 Cột của điểm 1
+     * @param r2 Hàng của điểm 2
+     * @param c2 Cột của điểm 2
+     * @return true nếu có đường đi, false nếu không.
+     */
+    public boolean algorithm(int r1, int c1, int r2, int c2) {
+        // Các kiểm tra ban đầu như cũ...
 
+        // Biến để đếm số lần gấp góc
+        int turns = 0;
+
+        // 1. Đường thẳng (I shape)
+        if (r1 == r2) { // Cùng hàng
+            if (checkLineX(c1, c2, r1)) {
+                turns = 1; // Đường thẳng
+                return checkTurns(turns);
             }
         }
+        if (c1 == c2) { // Cùng cột
+            if (checkLineY(r1, r2, c1)) {
+                turns = 1; // Đường thẳng
+                return checkTurns(turns);
+            }
+        }
+
+        // 2. Đường chữ L (L shape)
+        if (checkRect(r1, c1, r2, c2)) {
+            turns = 2; // Đường gấp 1 góc
+            return checkTurns(turns);
+        }
+
+        // 3. Đường mở rộng (U shape)
+        // Các hướng mở rộng
+        // 3. Đường mở rộng (U shape)
+        if (checkMoreLine(r1, c1, r2, c2)) {
+            return true;
+        }
+
         return false;
     }
-    /*Algorithm cho 2 diem*/
 
-    public boolean algorithm(Pikachu p1, Pikachu p2) {
-        if (matrix[p1.getXPoint()][p1.getYPoint()] == matrix[p2.getXPoint()][p2.getYPoint()]) {
-            if (p1.getXPoint() == p2.getXPoint()) {
-                if (this.checkLineX(p1.getYPoint(), p2.getYPoint(), p1.getXPoint())) {
-                    return true;
-                }
-            }
-            // Kiem tra voi cot y , hang x1,hang x2 
-            if (p1.getYPoint() == p2.getYPoint()) {
-                if (this.checkLineY(p1.getXPoint(), p2.getXPoint(), p1.getYPoint())) {
-
-                    return true;
-                }
-            }
-            // Xet duong di theo chieu ngang 
-            if (this.checkRecX(p1, p2)) {
-
-                return true;
-            }
-            // Xet duong fi theo chieu doc 
-            if (this.checkRecY(p1, p2)) {
-
-                return true;
-            }
-            // xet su mo rong theo chieu ngang ben phai 
-            if (this.checkMoreLineX(p1, p2, 1)) {
-
-                return true;
-            }
-            // xet su mo rong theo chieu ngang ben trai 
-            if (this.checkMoreLineX(p1, p2, -1)) {
-                //System.out.println("checkMoreLineX(p1, p2, -1)");
-                return true;
-            }
-            // Xet su mo rong theo chieu doc di len tren 
-            if (this.checkMoreLineY(p1, p2, 1)) {
-
-                return true;
-            }
-            // Xet su mo rong theo chieu doc di xuong duoi 
-            if (this.checkMoreLineY(p1, p2, -1)) {
-                //System.out.println("checkMoreLineY(p1, p2, -1)");
-                return true;
-            }
-        }
-        return false; // tra ve false neu khong tim thay duong di 
+    // Phương thức kiểm tra số lần gấp góc
+    private boolean checkTurns(int turns) {
+        return turns <= 3; // Không quá 3 đoạn thẳng
     }
 
-    public boolean canPlay(){
-        for (int i = 1; i < row-1; i++){
-            for ( int j = 1; j < col-1;j++){
-                if (matrix[i][j]!=0){
-                    for (int m = 1 ; m < row -1; m++){
-                        for (int n = 1; n < col-1; n++){
-                            Utils.debug(getClass(),i+":"+j+" -> " + m + ":"+n);
-                            if ((m!=i || n!=j) && matrix[m][n]!=0 && matrix[m][n] == matrix[i][j]){
-                                if (algorithm(new Pikachu(m,n),new Pikachu(i,j))){
-                                    Utils.debug(getClass(),"Go: "+i+":"+j+" -> " + m + ":"+n);
-                                    return true;
-                                }
+    private boolean checkMoreLine(int r1, int c1, int r2, int c2) {
+        int maxRow = matrix.length;
+        int maxCol = matrix[0].length;
+        boolean[][] visited = new boolean[maxRow][maxCol];
+
+        return dfs(r1, c1, r2, c2, -1, 0, visited);
+    }
+
+    private boolean dfs(int row, int col, int targetRow, int targetCol, int prevDir, int turns, boolean[][] visited) {
+        // Kiểm tra vượt quá số lần gấp khúc cho phép
+        if (turns > 2) return false;
+
+        // Nếu đến được điểm đích
+        if (row == targetRow && col == targetCol) return true;
+
+        visited[row][col] = true;
+
+        // Các hướng di chuyển: lên, phải, xuống, trái
+        int[] dRow = {-1, 0, 1, 0};
+        int[] dCol = {0, 1, 0, -1};
+
+        for (int dir = 0; dir < 4; dir++) {
+            int newRow = row + dRow[dir];
+            int newCol = col + dCol[dir];
+
+            // Kiểm tra giới hạn bảng và ô chưa được thăm
+            if (newRow >= 0 && newRow < matrix.length && newCol >= 0 && newCol < matrix[0].length
+                    && !visited[newRow][newCol] && (matrix[newRow][newCol] == CONST_VALUE || (newRow == targetRow && newCol == targetCol))) {
+                int newTurns = (prevDir == -1 || prevDir == dir) ? turns : turns + 1;
+                if (dfs(newRow, newCol, targetRow, targetCol, dir, newTurns, visited)) {
+                    return true;
+                }
+            }
+        }
+
+        visited[row][col] = false; // Backtrack
+        return false;
+    }
+
+
+
+    /**
+     * Tìm và trả về TỌA ĐỘ của một cặp Pikachu có thể nối được.
+     * @return Một mảng chứa 2 đối tượng Point đại diện cho tọa độ [hàng, cột]
+     *         của cặp gợi ý, hoặc null nếu không tìm thấy.
+     *         Point.x sẽ là hàng, Point.y sẽ là cột.
+     */
+    public Point[] suggestPairCoords() {
+        for (int r1 = 0; r1 < row; r1++) {
+            for (int c1 = 0; c1 < col; c1++) {
+                int val1 = matrix[r1][c1];
+                if (val1 == CONST_VALUE) continue; // Bỏ qua ô trống
+
+                // Bắt đầu vòng lặp thứ hai từ vị trí tiếp theo để tránh trùng lặp và tự so sánh
+                for (int r2 = r1; r2 < row; r2++) {
+                    // Nếu cùng hàng, bắt đầu cột thứ hai từ cột tiếp theo của điểm 1
+                    int startC2 = (r1 == r2) ? c1 + 1 : 0;
+                    for (int c2 = startC2; c2 < col; c2++) {
+                        int val2 = matrix[r2][c2];
+                        if (val1 == val2) { // Chỉ kiểm tra nếu cùng giá trị
+                            // Gọi hàm algorithm đã sửa đổi với tọa độ
+                            if (algorithm(r1, c1, r2, c2)) {
+                                // Trả về tọa độ bằng Point (x=hàng, y=cột)
+                                return new Point[]{new Point(r1, c1), new Point(r2, c2)};
                             }
                         }
                     }
                 }
             }
         }
-        return false;
+        return null; // không có cặp nào nối được
     }
+
+    /**
+     * Kiểm tra xem trên bảng còn nước đi hợp lệ nào không.
+     * @return true nếu còn nước đi, false nếu hết.
+     */
+    public boolean canPlay() {
+        // Gọi suggestPairCoords, nếu nó trả về khác null tức là còn nước đi
+        return suggestPairCoords() != null;
+    }
+
+    /* Các phương thức cũ không cần thiết nữa vì đã có renderMatrix tốt hơn */
+    // private int demPT(int value) { ... } // Không cần nữa
+    // private void change(int value) { ... } // Không cần nữa
+
+    /* Các phương thức checkRec cũ có thể bị loại bỏ hoặc giữ lại nếu bạn muốn so sánh */
+    // private boolean checkRecX(Pikachu p1, Pikachu p2) { ... }
+    // private boolean checkRecY(Pikachu p1, Pikachu p2) { ... }
+
 }
