@@ -246,64 +246,104 @@ public class GameController extends JFrame {
 
             @Override
             public void onPikachuClicked(int clickCounter, Pikachu... pikachus) {
-                // <<< THÊM: Bỏ qua click của người dùng nếu đang Auto Play >>>
+                // <<< GIỮ NGUYÊN: Bỏ qua click của người dùng nếu đang Auto Play >>>
                 if (isAutoPlaying) {
                     Utils.debug(getClass(), "[Controller] User click ignored (Auto Play active)");
-                    // Xóa viền nếu người dùng vô tình click ô đầu tiên
                     if(clickCounter == 1 && pikachus.length > 0 && pikachus[0] != null){
                         SwingUtilities.invokeLater(() -> {
                             pikachus[0].removeBorder();
                             pikachus[0].repaint();
                         });
+                        // Reset click count trong view nếu người dùng bấm nhầm ô đầu khi đang auto play
                         playGameView.setCountClicked(0);
                     }
                     return;
                 }
 
-                // --- Logic xử lý click cũ giữ nguyên ---
-                // (Đảm bảo có invokeLater cho các cập nhật UI)
+                // --- GIỮ NGUYÊN: Logic xử lý khi game đang Pause ---
                 Utils.debug(getClass(), "[Controller] Pikachu Clicked: count=" + clickCounter + "...");
-                if (!timer.isRunning() && clickCounter == 1) { /* xử lý bỏ chọn khi pause */
+                if (!timer.isRunning() && clickCounter == 1) { // Xử lý bỏ chọn ô 1 khi pause
                     if (pikachus != null && pikachus.length > 0 && pikachus[0] != null) {
                         SwingUtilities.invokeLater(() -> { pikachus[0].removeBorder(); pikachus[0].repaint(); });
                     }
-                    playGameView.setCountClicked(0);
+                    playGameView.setCountClicked(0); // Reset trong view
                     return;
                 }
-                if (!timer.isRunning() && clickCounter == 2) { /* bỏ qua click 2 khi pause */ return; }
+                if (!timer.isRunning() && clickCounter == 2) { // Bỏ qua click 2 khi pause
+                    return;
+                }
+                // --- Hết phần xử lý Pause ---
 
                 if (clickCounter == 1) {
+                    // Xử lý click lần 1: Vẽ viền ô đầu tiên
                     SwingUtilities.invokeLater(() -> {
-                        playGameView.clearSuggestion();
+                        playGameView.clearSuggestion(); // Xóa gợi ý cũ (nếu có)
                         pikachus[0].drawBorder(Color.red);
                         pikachus[0].repaint();
                     });
                 } else if (clickCounter == 2) {
-                    SwingUtilities.invokeLater(() -> { pikachus[1].drawBorder(Color.red); pikachus[1].repaint(); });
-                    timer.stop(); // <<< DỪNG TIMER CHÍNH >>>
+                    // Xử lý click lần 2
+                    Pikachu p1 = pikachus[0]; // Ô thứ nhất đã chọn
+                    Pikachu p2 = pikachus[1]; // Ô thứ hai vừa chọn
 
-                    Pikachu p1 = pikachus[0]; Pikachu p2 = pikachus[1];
-                    boolean isMatch = matrix.algorithm(p1.getXPoint(), p1.getYPoint(), p2.getXPoint(), p2.getYPoint());
+                    // Bước 1: Vẽ viền ô thứ 2 để người dùng thấy phản hồi ngay lập tức
+                    SwingUtilities.invokeLater(() -> {
+                        p2.drawBorder(Color.red); // Vẽ viền cho ô thứ hai
+                        p2.repaint();
+                    });
 
-                    if (isMatch) {
-                        // Cập nhật logic trước
+                    // Bước 2: Dừng timer chính (theo logic gốc của bạn)
+                    timer.stop(); // <<< TẠM DỪNG TIMER CHÍNH >>>
+
+                    // --- Bước 3: KIỂM TRA XEM 2 Ô CÓ CÙNG LOẠI KHÔNG --- <<<<<<<<<<<<<<< THÊM BƯỚC NÀY
+                    if (p1.getIndex() != p2.getIndex()) {
+                        // Nếu KHÔNG cùng loại
+                        Utils.debug(getClass(), "[Controller] Click Failed: Icon types mismatch (" + p1.getIndex() + " != " + p2.getIndex() + ")");
+                        SwingUtilities.invokeLater(() -> {
+                            p1.removeBorder(); p1.repaint(); // Xóa viền ô 1
+                            p2.removeBorder(); p2.repaint(); // Xóa viền ô 2 (vừa vẽ)
+                            playGameView.setCountClicked(0); // Reset click count trong View
+                            timer.start(); // <<< KHỞI ĐỘNG LẠI TIMER VÌ CHỌN SAI LOẠI >>>
+                        });
+                        return; // Thoát, không kiểm tra đường đi nữa
+                    }
+
+                    // --- Bước 4: Nếu CÙNG LOẠI, thì mới KIỂM TRA ĐƯỜNG ĐI ---
+                    Utils.debug(getClass(), "[Controller] Icons match ("+p1.getIndex()+"). Checking path...");
+                    // Giả sử getXPoint(), getYPoint() trả về tọa độ đúng cho thuật toán
+                    boolean isPathValid = matrix.algorithm(p1.getXPoint(), p1.getYPoint(), p2.getXPoint(), p2.getYPoint());
+
+                    if (isPathValid) {
+                        // --- Bước 5a: ĐƯỜNG ĐI HỢP LỆ -> Xử lý ăn cặp Pikachu ---
+                        Utils.debug(getClass(), "[Controller] Path valid. Processing match...");
+
+                        // Cập nhật trạng thái logic game (Model)
+                        // Nên thực hiện trước cập nhật UI
                         matrix.setXY(p1.getXPoint(), p1.getYPoint(), 0);
                         matrix.setXY(p2.getXPoint(), p2.getYPoint(), 0);
-                        coupleDone++; score += 100;
+                        coupleDone++;
+                        score += 100;
 
-                        // Cập nhật UI và kiểm tra trạng thái game sau
+                        // Cập nhật giao diện (View) và kiểm tra trạng thái game
                         SwingUtilities.invokeLater(() -> {
-                            p1.removeBorder(); p1.repaint(); p2.removeBorder(); p2.repaint();
-                            p1.setVisible(false); p2.setVisible(false);
+                            // Biến p1, p2 vẫn truy cập được trong lambda này
+                            p1.removeBorder(); // Không cần repaint() riêng vì setVisible(false) sẽ repaint
+                            p2.removeBorder();
+                            p1.setVisible(false);
+                            p2.setVisible(false);
                             playGameView.updateScore("Score: " + score);
-                            checkGameStatus(); // Gọi hàm helper kiểm tra trạng thái
+                            playGameView.setCountClicked(0); // Reset click count SAU KHI ăn thành công
+                            checkGameStatus(); // Gọi hàm kiểm tra thắng/qua màn/hết giờ
+                            // Timer vẫn đang dừng, sẽ được xử lý bởi checkGameStatus hoặc khi bắt đầu màn mới
                         });
                     } else {
-                        // Xử lý chọn sai
+                        // --- Bước 5b: ĐƯỜNG ĐI KHÔNG HỢP LỆ -> Xử lý chọn sai ---
+                        Utils.debug(getClass(), "[Controller] Path invalid.");
                         SwingUtilities.invokeLater(() -> {
-                            p1.removeBorder(); p1.repaint(); p2.removeBorder(); p2.repaint();
-                            playGameView.setCountClicked(0);
-                            timer.start(); // <<< KHỞI ĐỘNG LẠI TIMER CHÍNH >>>
+                            p1.removeBorder(); p1.repaint(); // Xóa viền ô 1
+                            p2.removeBorder(); p2.repaint(); // Xóa viền ô 2
+                            playGameView.setCountClicked(0); // Reset click count
+                            timer.start(); // <<< KHỞI ĐỘNG LẠI TIMER CHÍNH VÌ ĐƯỜNG ĐI SAI >>>
                         });
                     }
                 }

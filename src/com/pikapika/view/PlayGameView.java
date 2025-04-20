@@ -31,7 +31,7 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
     private JLabel score;
     private JButton btnPause;
     private JButton btnSuggest;
-    private JButton btnAutoPlay;   // <<< THÊM LẠI NÚT AUTO PLAY >>>
+    private JButton btnAutoPlay;
     private JLabel mapCount;
 
     // Listener
@@ -45,7 +45,7 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
 
     // Click State
     private int countClicked = 0;
-    public Pikachu one; // Để Controller có thể reset nếu cần (hoặc dùng getter/setter)
+    public Pikachu one;
     private Pikachu two;
 
     // Suggestion State
@@ -53,8 +53,7 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
     private Pikachu suggestedP2 = null;
     private Timer suggestionTimer;
     private final int SUGGESTION_DURATION_MS = 1500;
-    // <<< SỬA LẠI MÀU GỢI Ý THEO YÊU CẦU TRƯỚC >>>
-    private final Color SUGGEST_BORDER_COLOR = Color.BLACK;
+    private final Color SUGGEST_BORDER_COLOR = Color.BLUE;
 
 
     // Constructors
@@ -107,18 +106,17 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
         btnSuggest.setToolTipText("Hiển thị một cặp có thể ăn");
         btnSuggest.addActionListener(this);
 
-        // <<< KHỞI TẠO VÀ CẤU HÌNH NÚT AUTO PLAY >>>
-        btnAutoPlay = new JButton("Tự Chơi"); // Văn bản ban đầu
+        btnAutoPlay = new JButton("Tự Chơi");
         btnAutoPlay.setFont(new Font("Arial", Font.BOLD, 12));
         btnAutoPlay.setMargin(new Insets(2, 5, 2, 5));
-        btnAutoPlay.setActionCommand("AUTO_PLAY"); // Action Command mới
+        btnAutoPlay.setActionCommand("AUTO_PLAY");
         btnAutoPlay.setToolTipText("Để máy tự động chơi màn này");
-        btnAutoPlay.addActionListener(this); // Thêm listener
+        btnAutoPlay.addActionListener(this);
 
-        // <<< CẬP NHẬT LAYOUT ĐỂ CHỨA btnAutoPlay >>>
         setupTopMenuLayout();
 
         // Pikachu Board Panel Setup
+        // Kích thước GridLayout là số ô thực tế, không tính viền
         pikachuLayout = new GridLayout(row - 2, col - 2, 2, 2);
         pikachuPanel = new JPanel(pikachuLayout);
         pikachuPanel.setOpaque(false);
@@ -126,15 +124,15 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
 
         // Add Panels to Main Layout
         add(topMenuPanel, BorderLayout.PAGE_START);
-        JPanel centerPanel = new JPanel(new GridBagLayout());
+        JPanel centerPanel = new JPanel(new GridBagLayout()); // Dùng GridBagLayout để căn giữa pikachuPanel
         centerPanel.setOpaque(false);
         centerPanel.add(pikachuPanel);
         add(centerPanel, BorderLayout.CENTER);
     }
 
-    // --- Tách hàm cài đặt GroupLayout (Đã cập nhật) ---
+    // --- Tách hàm cài đặt GroupLayout ---
     private void setupTopMenuLayout() {
-        // <<< SỬA ĐỔI LAYOUT ĐỂ CHỨA btnAutoPlay >>>
+        // Giữ nguyên phần layout của bạn
         topMenuLayout.setHorizontalGroup(
                 topMenuLayout.createSequentialGroup()
                         .addComponent(btnReplay, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
@@ -181,7 +179,7 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
 
     // --- Hàm trợ giúp cấu hình nút Icon ---
     private void configureButton(JButton button, String iconPath, String actionCommand) {
-        // ... (Giữ nguyên) ...
+        // Giữ nguyên phần cấu hình nút của bạn
         try {
             java.net.URL imgUrl = getClass().getResource(iconPath);
             if (imgUrl != null) {
@@ -206,14 +204,14 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
 
     // --- Hàm trợ giúp tạo JLabel ---
     private JLabel createInfoLabel(String text) {
-        // ... (Giữ nguyên) ...
+        // Giữ nguyên phần tạo label của bạn
         JLabel label = new JLabel(text);
         label.setForeground(Color.WHITE);
         label.setFont(new Font("Arial", Font.BOLD, 14));
         return label;
     }
 
-    // --- Xử lý sự kiện (Đã cập nhật) ---
+    // --- Xử lý sự kiện ---
     @Override
     public void actionPerformed(ActionEvent e) {
         String command = e.getActionCommand();
@@ -221,38 +219,66 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
         if (e.getSource() instanceof Pikachu) {
             if (playGameListener != null) {
                 Pikachu clickedPikachu = (Pikachu) e.getSource();
-                if (!clickedPikachu.isVisible()) return;
+                // Bỏ qua click nếu nút không hiển thị (đã bị ăn)
+                if (!clickedPikachu.isVisible()) {
+                    Utils.debug(getClass(), "Clicked on an invisible Pikachu. Ignoring.");
+                    // Reset nếu đang click dở dang
+                    if(countClicked == 1 && one != null){
+                        one.removeBorder();
+                        one.repaint();
+                    }
+                    countClicked = 0;
+                    one = null;
+                    two = null;
+                    return;
+                }
+
 
                 ++countClicked;
                 switch (countClicked) {
                     case 1:
+                        // Lưu ô đầu tiên và báo cho Controller
                         one = clickedPikachu;
                         playGameListener.onPikachuClicked(countClicked, one);
                         break;
                     case 2:
-                        if (one != null && !one.equals(clickedPikachu)) {
-                            two = clickedPikachu;
-                            playGameListener.onPikachuClicked(countClicked, one, two);
-                        } else if (one != null && one.equals(clickedPikachu)) {
+                        // Kiểm tra xem có phải click lại ô cũ không
+                        if (one != null && one.equals(clickedPikachu)) {
                             Utils.debug(getClass(), "Clicked same Pikachu again, deselecting.");
-                            one.removeBorder(); one.repaint();
-                            countClicked = 0; one = null;
-                        } else { countClicked = 0; one = null; }
+                            // Bỏ chọn ô đầu tiên
+                            one.removeBorder();
+                            one.repaint();
+                            countClicked = 0; // Reset về trạng thái chưa chọn gì
+                            one = null;
+                        } else if (one != null) {
+                            // Click vào ô thứ hai khác ô đầu tiên
+                            two = clickedPikachu;
+                            // Báo cho Controller xử lý cặp one và two
+                            playGameListener.onPikachuClicked(countClicked, one, two);
+                            // Controller sẽ quyết định reset countClicked hay không
+                        } else {
+                            // Trường hợp lạ: countClicked=2 nhưng 'one' là null? Reset đề phòng.
+                            Utils.debug(getClass(), "Warning: countClicked=2 but 'one' is null. Resetting.");
+                            countClicked = 0;
+                            one = null;
+                        }
                         break;
-                    default:
-                        countClicked = 0;
+                    default: // Click quá 2 lần hoặc trạng thái không hợp lệ -> Reset
+                        Utils.debug(getClass(), "Invalid click state (count > 2 or unexpected). Resetting.");
                         if (one != null) { one.removeBorder(); one.repaint(); }
-                        if (two != null) { two.removeBorder(); two.repaint(); }
-                        one = null; two = null;
+                        if (two != null) { two.removeBorder(); two.repaint(); } // Đảm bảo two cũng được reset nếu có
+                        countClicked = 0;
+                        one = null;
+                        two = null;
                         break;
                 }
             }
-        } else if (command != null && playGameListener != null) { // Xử lý các nút điều khiển
+        } else if (command != null && playGameListener != null) { // Xử lý các nút điều khiển (Replay, Pause, Suggest, AutoPlay)
             switch (command) {
                 case "REPLAY": playGameListener.onReplayClicked(); break;
                 case BT_PAUSE: playGameListener.onPauseClicked(); break;
                 case "SUGGEST": playGameListener.onSuggestClicked(); break;
-                case "AUTO_PLAY": playGameListener.onAutoPlayClicked(); break; // <<< THÊM CASE AUTO_PLAY >>>
+                case "AUTO_PLAY": playGameListener.onAutoPlayClicked(); break;
                 default: Utils.debug(getClass(), "Unknown button command: " + command); break;
             }
         }
@@ -260,45 +286,75 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
 
     // --- Render Map (màn mới) ---
     public void renderMap(int[][] matrix) {
-        // ... (Giữ nguyên) ...
-        clearSuggestion();
-        pikachuIcon = new Pikachu[row][col];
-        pikachuPanel.removeAll();
+        clearSuggestion(); // Xóa gợi ý cũ
+        pikachuIcon = new Pikachu[row][col]; // Khởi tạo mảng chứa Pikachu
+        pikachuPanel.removeAll(); // Xóa hết các nút cũ trên panel
+
+        // Lặp qua các ô bên trong (không tính viền ngoài của ma trận logic)
         for (int i = 1; i < row - 1; i++) {
             for (int j = 1; j < col - 1; j++) {
-                pikachuIcon[i][j] = createButton(i, j); // Sử dụng createButton đã sửa
-                Icon icon = getIcon(matrix[i][j]);
-                pikachuIcon[i][j].setIcon(icon);
-                pikachuIcon[i][j].setVisible(matrix[i][j] != 0);
-                // pikachuIcon[i][j].setBorder(null); // createButton đã set border mặc định
-                pikachuPanel.add(pikachuIcon[i][j]);
+                int imageIndex = matrix[i][j]; // Lấy chỉ số hình ảnh từ ma trận logic
+                // Tạo nút Pikachu mới với tọa độ (i, j) và chỉ số hình ảnh
+                pikachuIcon[i][j] = createButton(i, j, imageIndex); // <<< SỬA Ở ĐÂY
+                Icon icon = getIcon(imageIndex); // Lấy đối tượng Icon
+                pikachuIcon[i][j].setIcon(icon); // Đặt icon cho nút
+                pikachuIcon[i][j].setVisible(imageIndex != 0); // Chỉ hiển thị nếu chỉ số ảnh > 0
+                pikachuPanel.add(pikachuIcon[i][j]); // Thêm nút vào panel
             }
         }
-        pikachuPanel.revalidate();
-        pikachuPanel.repaint();
-        countClicked = 0; one = null; two = null;
+
+        pikachuPanel.revalidate(); // Yêu cầu layout lại panel
+        pikachuPanel.repaint();    // Vẽ lại panel
+        // Reset trạng thái click
+        countClicked = 0;
+        one = null;
+        two = null;
     }
 
-    // --- Update Map (chơi lại / qua màn) ---
+    // --- Update Map (chơi lại / qua màn / xóa cặp) ---
     public void updateMap(int[][] matrix) {
-        // ... (Giữ nguyên, đảm bảo reset border đúng cách) ...
-        clearSuggestion();
-        countClicked = 0; one = null; two = null;
+        clearSuggestion(); // Xóa gợi ý cũ
+        // Không reset one, two ở đây, Controller sẽ quyết định khi nào reset
+        // countClicked = 0; one = null; two = null; // <<< TẠM BỎ RESET Ở ĐÂY
+
         for (int i = 1; i < row - 1; i++) {
             for (int j = 1; j < col - 1; j++) {
                 if (pikachuIcon[i][j] != null) {
-                    pikachuIcon[i][j].setIcon(getIcon(matrix[i][j]));
-                    pikachuIcon[i][j].removeBorder(); // <<< SỬ DỤNG removeBorder ĐỂ RESET >>>
-                    pikachuIcon[i][j].setVisible(matrix[i][j] != 0);
-                    pikachuIcon[i][j].repaint();
+                    int newImageIndex = matrix[i][j]; // Lấy chỉ số ảnh mới từ ma trận
+                    Icon newIcon = getIcon(newImageIndex); // Lấy Icon mới
+
+                    // Chỉ cập nhật nếu trạng thái thay đổi (icon hoặc visibility)
+                    // Điều này có thể tối ưu hiệu suất một chút
+                    boolean needsUpdate = false;
+                    if (pikachuIcon[i][j].getIndex() != newImageIndex) { // Kiểm tra index logic
+                        pikachuIcon[i][j].setImageIndex(newImageIndex); // <<< SỬA Ở ĐÂY: Cập nhật index logic
+                        needsUpdate = true;
+                    }
+                    if (pikachuIcon[i][j].getIcon() != newIcon) { // So sánh đối tượng Icon (có thể không chính xác nếu tạo mới liên tục)
+                        pikachuIcon[i][j].setIcon(newIcon); // <<< Cập nhật hình ảnh hiển thị
+                        needsUpdate = true;
+                    }
+                    if (pikachuIcon[i][j].isVisible() != (newImageIndex != 0)) {
+                        pikachuIcon[i][j].setVisible(newImageIndex != 0); // <<< Cập nhật trạng thái hiển thị
+                        needsUpdate = true;
+                    }
+
+                    // Nếu có sự thay đổi, đảm bảo không còn viền và repaint
+                    if (needsUpdate) {
+                        pikachuIcon[i][j].removeBorder(); // Xóa viền (quan trọng khi load lại map)
+                        pikachuIcon[i][j].repaint();      // Yêu cầu vẽ lại nút này
+                    }
                 } else {
+                    // Lỗi này không nên xảy ra nếu renderMap chạy đúng
                     System.err.println("Warning: pikachuIcon[" + i + "][" + j + "] is null during updateMap.");
                 }
             }
         }
-        pikachuPanel.revalidate();
-        pikachuPanel.repaint();
+        // Không cần revalidate/repaint toàn bộ panel nếu chỉ ẩn/hiện nút
+        // pikachuPanel.revalidate();
+        // pikachuPanel.repaint();
     }
+
 
     // --- Lấy Icon ---
     private Icon getIcon(int index) {
@@ -324,14 +380,16 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
         }
     }
 
-    // --- Tạo Pikachu Button (Đã cập nhật để dùng border mặc định từ Pikachu.java) ---
-    private Pikachu createButton(int r, int c) {
-        Pikachu btn = new Pikachu(r, c); // Constructor Pikachu đã set EmptyBorder
-        // btn.setBorder(null); // <<< BỎ ĐI, ĐÃ SET TRONG CONSTRUCTOR PIKACHU >>>
-        btn.setContentAreaFilled(false);
-        btn.setFocusPainted(false);
+    // --- Tạo Pikachu Button ---
+    // <<< SỬA: Thêm tham số imageIndex >>>
+    private Pikachu createButton(int r, int c, int imageIndex) {
+        // <<< SỬA: Truyền imageIndex vào constructor của Pikachu >>>
+        Pikachu btn = new Pikachu(r, c, imageIndex);
+        // Các cài đặt khác đã chuyển vào constructor Pikachu (setBorder, setContentAreaFilled,...)
+        // btn.setContentAreaFilled(false); // Đã làm trong constructor Pikachu
+        // btn.setFocusPainted(false);     // Đã làm trong constructor Pikachu
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.addActionListener(this);
+        btn.addActionListener(this); // Gán listener cho nút
         return btn;
     }
 
@@ -341,116 +399,148 @@ public class PlayGameView extends JpanelBackground implements ActionListener {
     }
 
     // --- Update UI Methods ---
-    public void updateTimer(String timerText) { SwingUtilities.invokeLater(() -> this.timer.setText(timerText)); } // Thêm invokeLater
-    public void updateScore(String scoreText) { SwingUtilities.invokeLater(() -> this.score.setText(scoreText)); } // Thêm invokeLater
-    public void updateMapNum(String mapText) { SwingUtilities.invokeLater(() -> this.mapCount.setText(mapText)); } // Thêm invokeLater
-    public void setCountClicked(int value) { this.countClicked = value; }
-    public void updateProgress(int progressValue) { SwingUtilities.invokeLater(() -> { int min = timerProgress.getMinimum(); int max = timerProgress.getMaximum(); timerProgress.setValue(Math.max(min, Math.min(max, progressValue))); }); } // Thêm invokeLater
-    public void updateMaxProgress(int maxProgress) { SwingUtilities.invokeLater(() -> { timerProgress.setMaximum(maxProgress); timerProgress.setValue(maxProgress); }); } // Thêm invokeLater
+    // Giữ nguyên các hàm update UI, đảm bảo dùng invokeLater
+    public void updateTimer(String timerText) { SwingUtilities.invokeLater(() -> this.timer.setText(timerText)); }
+    public void updateScore(String scoreText) { SwingUtilities.invokeLater(() -> this.score.setText(scoreText)); }
+    public void updateMapNum(String mapText) { SwingUtilities.invokeLater(() -> this.mapCount.setText(mapText)); }
+    public void setCountClicked(int value) { this.countClicked = value; } // Cần được gọi từ Controller khi cần reset
+    public void updateProgress(int progressValue) { SwingUtilities.invokeLater(() -> { int min = timerProgress.getMinimum(); int max = timerProgress.getMaximum(); timerProgress.setValue(Math.max(min, Math.min(max, progressValue))); }); }
+    public void updateMaxProgress(int maxProgress) { SwingUtilities.invokeLater(() -> { timerProgress.setMaximum(maxProgress); timerProgress.setValue(maxProgress); }); }
     public int getMaxCountDown() { return timerProgress.getMaximum(); }
 
-    // <<< THÊM LẠI: Phương thức lấy Pikachu tại tọa độ >>>
+    // --- Lấy Pikachu tại tọa độ ---
     public Pikachu getPikachuAt(int r, int c) {
-        if (r >= 0 && r < row && c >= 0 && c < col && pikachuIcon != null && pikachuIcon[r] != null) {
-            // Đảm bảo truy cập trong giới hạn mảng thực tế
-            if(r < pikachuIcon.length && c < pikachuIcon[r].length){
-                return pikachuIcon[r][c];
-            }
+        // Kiểm tra biên của mảng pikachuIcon
+        if (r >= 0 && r < row && c >= 0 && c < col && pikachuIcon != null && pikachuIcon[r] != null && c < pikachuIcon[r].length) {
+            return pikachuIcon[r][c];
         }
-        // Log lỗi nếu tọa độ không hợp lệ
-        // System.err.println("getPikachuAt: Invalid coordinates or null array: r=" + r + ", c=" + c);
+        // Tọa độ không hợp lệ hoặc mảng chưa khởi tạo/sai kích thước
+        // Utils.debug(getClass(), "getPikachuAt: Invalid coordinates or null array element: r=" + r + ", c=" + c);
         return null;
     }
 
-    // <<< THÊM LẠI: Phương thức cập nhật trạng thái nút Auto Play >>>
+    // --- Cập nhật trạng thái nút Auto Play ---
     public void updateAutoPlayButtonState(boolean isPlaying) {
-        SwingUtilities.invokeLater(() -> { // Đảm bảo cập nhật UI trên EDT
+        SwingUtilities.invokeLater(() -> {
             if (isPlaying) {
                 btnAutoPlay.setText("Dừng Auto");
                 btnAutoPlay.setToolTipText("Nhấn để dừng chế độ tự động chơi");
-                // Có thể vô hiệu hóa các nút khác ở đây (tùy chọn)
-                // btnPause.setEnabled(false); btnReplay.setEnabled(false); btnSuggest.setEnabled(false);
+                // Tùy chọn: Vô hiệu hóa các nút khác khi đang auto play
+                // btnPause.setEnabled(false);
+                // btnReplay.setEnabled(false);
+                // btnSuggest.setEnabled(false);
             } else {
                 btnAutoPlay.setText("Tự Chơi");
                 btnAutoPlay.setToolTipText("Để máy tự động chơi màn này");
-                // Kích hoạt lại các nút khác (nếu đã vô hiệu hóa)
-                // btnPause.setEnabled(true); btnReplay.setEnabled(true); btnSuggest.setEnabled(true);
+                // Tùy chọn: Kích hoạt lại các nút khác
+                // btnPause.setEnabled(true);
+                // btnReplay.setEnabled(true);
+                // btnSuggest.setEnabled(true);
             }
-            btnAutoPlay.setEnabled(true); // Luôn bật nút này để có thể dừng
+            // Luôn cho phép bấm nút AutoPlay để có thể dừng
+            btnAutoPlay.setEnabled(true);
         });
     }
 
 
 
-    // --- Suggestion Management Methods (Giữ nguyên các phương thức đã sửa) ---
+    // --- Suggestion Management Methods ---
+    // Cần đảm bảo getIndex() trả về int
     public void displaySuggestionAt(Point p1Coord, Point p2Coord) {
-        // ... (Giữ nguyên implementation) ...
-        if (p1Coord == null || p2Coord == null) { /*...*/ return; }
-        Utils.debug(getClass(), "Attempting to find Pikachu at coordinates: [" + p1Coord.x + "," + p1Coord.y + "] and [" + p2Coord.x + "," + p2Coord.y + "]");
-        try {
-            Pikachu actualP1 = getPikachuAt(p1Coord.x, p1Coord.y); // <<< SỬ DỤNG GETTER >>>
-            Pikachu actualP2 = getPikachuAt(p2Coord.x, p2Coord.y); // <<< SỬ DỤNG GETTER >>>
-            if (actualP1 != null && actualP1.isVisible() && actualP2 != null && actualP2.isVisible()) {
-                Utils.debug(getClass(), "Found actual Pikachu objects: " + actualP1.getIndex() + " and " + actualP2.getIndex());
+        if (p1Coord == null || p2Coord == null) {
+            Utils.debug(getClass(), "displaySuggestionAt: Received null coordinates.");
+            return;
+        }
+        Utils.debug(getClass(), "Attempting to find Pikachu at coordinates for suggestion: P1" + p1Coord + ", P2" + p2Coord);
+
+        Pikachu actualP1 = getPikachuAt(p1Coord.x, p1Coord.y);
+        Pikachu actualP2 = getPikachuAt(p2Coord.x, p2Coord.y);
+
+        if (actualP1 != null && actualP1.isVisible() && actualP2 != null && actualP2.isVisible()) {
+            // Thêm kiểm tra index ở đây để chắc chắn Controller gửi cặp đúng
+            if (actualP1.getIndex() == actualP2.getIndex()) {
+                Utils.debug(getClass(), "Found actual Pikachu objects for suggestion: P1 Index=" + actualP1.getIndex() + ", P2 Index=" + actualP2.getIndex());
                 showSuggestionInternal(actualP1, actualP2);
-            } else { /*...*/ }
-        } catch (ArrayIndexOutOfBoundsException e) { /*...*/ }
-        catch (Exception e) { /*...*/ }
+            } else {
+                Utils.debug(getClass(), "Error in suggestion logic: Controller provided mismatching pair. P1 Index=" + actualP1.getIndex() + ", P2 Index=" + actualP2.getIndex());
+            }
+        } else {
+            Utils.debug(getClass(), "Could not find visible Pikachu objects at suggested coordinates.");
+            if(actualP1 == null) Utils.debug(getClass(), "Reason: actualP1 is null");
+            else if(!actualP1.isVisible()) Utils.debug(getClass(), "Reason: actualP1 is not visible");
+            if(actualP2 == null) Utils.debug(getClass(), "Reason: actualP2 is null");
+            else if(!actualP2.isVisible()) Utils.debug(getClass(), "Reason: actualP2 is not visible");
+        }
     }
 
     private void showSuggestionInternal(Pikachu p1, Pikachu p2) {
-        // ... (Giữ nguyên implementation - đảm bảo dùng repaint) ...
-        clearSuggestion();
-        this.suggestedP1 = p1; this.suggestedP2 = p2;
+//
+        this.suggestedP1 = p1;
+        this.suggestedP2 = p2;
         if (this.suggestedP1 != null && this.suggestedP2 != null) {
-            Utils.debug(getClass(), "Internal: Showing suggestion for " + suggestedP1.getIndex() + " and " + suggestedP2.getIndex());
-            this.suggestedP1.drawBorder(SUGGEST_BORDER_COLOR); // Màu đỏ
-            this.suggestedP2.drawBorder(SUGGEST_BORDER_COLOR);
-            this.suggestedP1.repaint();
-            this.suggestedP2.repaint();
-            startSuggestionTimer();
-        } else { /*...*/ }
+            Utils.debug(getClass(), "Internal: Showing suggestion border for P1 Index=" + suggestedP1.getIndex() + " and P2 Index=" + suggestedP2.getIndex());
+            // Sử dụng invokeLater để đảm bảo cập nhật UI trên EDT
+            SwingUtilities.invokeLater(() -> {
+                if (suggestedP1 != null) { // Kiểm tra lại phòng trường hợp bị clear giữa chừng
+                    suggestedP1.drawBorder(SUGGEST_BORDER_COLOR);
+                    suggestedP1.repaint();
+                }
+                if (suggestedP2 != null) {
+                    suggestedP2.drawBorder(SUGGEST_BORDER_COLOR);
+                    suggestedP2.repaint();
+                }
+            });
+            startSuggestionTimer(); // Bắt đầu timer tự xóa gợi ý
+        } else {
+            Utils.debug(getClass(), "Internal: Cannot show suggestion, one or both Pikachu objects became null.");
+        }
     }
 
     public void clearSuggestion() {
-        // ... (Giữ nguyên implementation - đảm bảo dùng repaint) ...
-        stopSuggestionTimer();
-        if (suggestedP1 != null) {
-            suggestedP1.removeBorder(); suggestedP1.repaint(); suggestedP1 = null;
-        }
-        if (suggestedP2 != null) {
-            suggestedP2.removeBorder(); suggestedP2.repaint(); suggestedP2 = null;
-        }
+        stopSuggestionTimer(); // Dừng timer (nếu đang chạy)
+        // Sử dụng invokeLater để đảm bảo cập nhật UI trên EDT
+        SwingUtilities.invokeLater(() -> {
+            if (suggestedP1 != null) {
+                suggestedP1.removeBorder();
+                suggestedP1.repaint();
+                suggestedP1 = null; // Đặt lại thành null
+            }
+            if (suggestedP2 != null) {
+                suggestedP2.removeBorder();
+                suggestedP2.repaint();
+                suggestedP2 = null; // Đặt lại thành null
+            }
+        });
     }
 
     private void startSuggestionTimer() {
-        // ... (Giữ nguyên implementation - đảm bảo dùng invokeLater) ...
-        stopSuggestionTimer();
+        stopSuggestionTimer(); // Dừng timer cũ trước khi tạo timer mới
         suggestionTimer = new Timer(SUGGESTION_DURATION_MS, e -> SwingUtilities.invokeLater(this::clearSuggestion) );
-        suggestionTimer.setRepeats(false);
+        suggestionTimer.setRepeats(false); // Chỉ chạy một lần
         suggestionTimer.start();
     }
 
     private void stopSuggestionTimer() {
-        // ... (Giữ nguyên implementation) ...
-        if (suggestionTimer != null && suggestionTimer.isRunning()) { suggestionTimer.stop(); }
-        suggestionTimer = null;
+        if (suggestionTimer != null && suggestionTimer.isRunning()) {
+            suggestionTimer.stop();
+        }
+        suggestionTimer = null; // Giải phóng timer
     }
 
-    // --- Listener Interface (Đã cập nhật) ---
+    // --- Listener Interface ---
     public interface PlayGameListener {
         void onReplayClicked();
         void onPauseClicked();
         void onSuggestClicked();
-        void onAutoPlayClicked(); // <<< THÊM LẠI PHƯƠNG THỨC NÀY >>>
-        void onPikachuClicked(int clickCounter, Pikachu... pikachus);
+        void onAutoPlayClicked();
+        void onPikachuClicked(int clickCounter, Pikachu... pikachus); // Truyền cả đối tượng Pikachu
     }
 
     // --- Override setBackgroundImage ---
     @Override
     public void setBackgroundImage(String imagePath) {
         super.setBackgroundImage(imagePath);
-        // this.repaint();
+        this.repaint(); // Yêu cầu vẽ lại toàn bộ panel khi nền thay đổi
     }
 
 } // Kết thúc lớp PlayGameView
