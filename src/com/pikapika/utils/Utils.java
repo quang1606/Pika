@@ -21,7 +21,8 @@ public class Utils {
     public static final int MAP_COL = 12;
     public static final int PIKACHU_NUMBER = 34;
     public static final boolean DEBUG = true;
-
+    // Trong file com/pikapika/utils/Utils.java
+    public static final String BT_AUTO_PLAY = "Tự Động Chơi"; // Hoặc "Auto Play"
     public static void debug(Class clz,String debug){
         if (DEBUG){
             debug = debug == null ? "Null debug string!" : debug;
